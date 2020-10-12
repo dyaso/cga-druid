@@ -11,7 +11,7 @@
 use std::fmt;
 use std::ops::{Index,IndexMut,Add,Sub,Mul,BitAnd,BitOr,BitXor,Not};
 
-type float_t = f64;
+type float_t = f32;
 
 // use std::f64::consts::PI;
 const PI: float_t = 3.14159265358979323846;
@@ -20,7 +20,7 @@ const basis: &'static [&'static str] = &[ "1","e0","e1","e2","e3","e01","e02","e
 const basis_count: usize = basis.len();
 
 #[derive(Default,Debug,Clone,PartialEq)]
-struct PGA3D {
+pub struct PGA3D {
     mvec: Vec<float_t>
 }
 

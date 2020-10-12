@@ -18,6 +18,9 @@ use druid::kurbo::{BezPath,Circle};
 use druid::piet::{FontFamily, ImageFormat, InterpolationMode, FontWeight, FontStyle,
 
 };
+
+use druid::kurbo;
+
 use druid::widget::prelude::*;
 use druid::{
     Affine, AppLauncher, ArcStr, Color, FontDescriptor, LocalizedString, Point, Rect, TextLayout,
@@ -26,11 +29,29 @@ use druid::{
 };
 
 use std::rc::Rc;
-use std::cell::RefCell;
+// use std::cell::RefCell;
 
 mod pga3d;
+use pga3d::PGA3D;
 
-struct CustomWidget;
+#[derive(Default)]
+struct CustomWidget {
+    top_plane: Rc<PGA3D>,
+    bottom_plane: Rc<PGA3D>,
+    left_plane: Rc<PGA3D>,
+    right_plane: Rc<PGA3D>,
+}
+
+// impl Default for CustomWidget {
+//     fn default() -> CustomWidget {
+//         CustomWidget{
+//             top_plane: Rc::new(PGA3D::zero()),
+//             bottom_plane: Rc::new(PGA3D::zero()),
+//             left_plane: Rc::new(PGA3D::zero()),
+//             right_plane: Rc::new(PGA3D::zero()),
+//         }
+//     }
+// }
 
 fn drawtext(ctx: &mut impl RenderContext) {
      let layout2 = ctx
@@ -39,12 +60,22 @@ fn drawtext(ctx: &mut impl RenderContext) {
 ;
 }
 
+#[derive(Clone,Default)]
+struct PGA {
+    multivector: PGA3D,
+}
+
+// impl Data for PGA3G {
+
+// }
+
 #[derive(Clone,Data)]
 struct State {
-    min_x: f32,
-    max_x: f32,
-    min_y: f32,
-    max_y: f32,
+    uninitialized: bool,
+    desired_left: f32,
+    desired_right: f32,
+    desired_bottom: f32,
+    desired_top: f32,
 
     points: Rc<Vec<Dot>>,
     // points: Rc<RefCell<Vec<Dot>>>,
@@ -60,15 +91,64 @@ impl GeometricConstruction for State {
 
         // self.points.push(Dot{label: label, x:x, y:y});
         Rc::get_mut(&mut self.points).unwrap().push(Dot{label: label, x:x, y:y});
+        // self.points.push(Dot{label: label, x:x, y:y});
         // (Rc::get_mut(&mut self.points).unwrap()).borrow_mut().push(Dot{label: label, x:x, y:y});
+    }
+}
+
+impl CustomWidget {
+pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
+        let desired_width  = state.desired_right - state.desired_left;
+        let desired_height = state.desired_top   - state.desired_bottom;
+        let desired_aspect_ratio = desired_width / desired_height;
+
+        let center_x = (state.desired_right + state.desired_left) / 2.;
+        let center_y = (state.desired_top   + state.desired_bottom) / 2.;
+
+        let window_aspect_ratio  =  window.width / window.height;
+
+        let mut top    = state.desired_top;
+        let mut left   = state.desired_left;
+        let mut right  = state.desired_right;
+        let mut bottom = state.desired_bottom;
+
+        if window_aspect_ratio > desired_aspect_ratio as f64 {
+            // actual window is wider than desired viewport
+            let half_width = (desired_height as f64 / window.height) * 0.5 * window.width;
+            right = center_x + half_width as f32;
+            left  = center_x - half_width as f32;
+        } else {
+            // actual window is taller than desired viewport
+            let half_height = (desired_width as f64 / window.width) * 0.5 * window.height;
+            top    = center_y + half_height as f32;
+            bottom = center_y - half_height as f32;
+        }
+
+        self.top_plane    = Rc::new(PGA3D::plane(0., top, 0., 1.));
+        self.left_plane   = Rc::new(PGA3D::plane(left, 0., 0., 1.));
+        self.right_plane  = Rc::new(PGA3D::plane(right, 0., 0., 1.));
+        self.bottom_plane = Rc::new(PGA3D::plane(0., bottom, 0., 1.));
+
+        println!("top: {}", self.top_plane);
+        println!("bottom: {}", self.bottom_plane);
+        println!("left: {}", self.left_plane);
+        println!("right: {}", self.right_plane);
+
+
+
     }
 }
 
 impl Default for State {
     fn default() -> State {
-        State{min_x: -2., min_y: -2., max_x: 2., max_y: 2.,points: Rc::new(Vec::new())
-        // State{min_x: -2., min_y: -2., max_x: 2., max_y: 2.,points: Rc::new(RefCell::new(Vec::new()))
-            ,x:0.,y:0.
+        State{uninitialized: true, 
+            desired_left: -2., 
+            desired_bottom: -2., 
+            desired_right: 2., 
+            desired_top: 2.,
+            points: Rc::new(Vec::new()),
+        // State{left: -2., bottom: -2., right: 2., max_y: 2.,points: Rc::new(RefCell::new(Vec::new()))
+            x:0.,y:0.,
         }
     }
 }
@@ -80,23 +160,52 @@ struct Dot {
 }
 
 impl Widget<State> for CustomWidget {
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut State, _env: &Env) {
-
-        println!("event {:?}", _event);
-    _ctx.request_focus();
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut State, _env: &Env) {
+// ctx.request_focus();
+        match event {
+            Event::WindowConnected => {
+                ctx.request_focus();
+            }
+            Event::KeyDown(e) => {
+                println!("key down event {:?}", e);
+            }
+            _ => {
+                println!("unhandled event {:?}", event);
+            }
         }
+        // println!("eeevent {:?}", event);
+    }
 
     fn lifecycle(
         &mut self,
-        _ctx: &mut LifeCycleCtx,
-        _event: &LifeCycle,
-        _data: &State,
+        ctx: &mut LifeCycleCtx,
+        event: &LifeCycle,
+        data: &State,
         _env: &Env,
     ) {
+        match event {
+            LifeCycle::Size(s) => {
+            //     println!("re
+            // // size! {}x{}", s.width, s.height);
+                self.establish_boundaries(data, s);
+            }
+            LifeCycle::WidgetAdded => {println!("widg");
+               ctx.register_for_focus();
+            }
+            LifeCycle::FocusChanged(true) => {
+               // event.request_focus();
+
+            }
+            _ => {println!("unknown lifecycyle event: {:?}", event)
+            }
+        }
 
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &State, _data: &State, _env: &Env) {}
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &State, _data: &State, _env: &Env) {
+        println!("update event: {}",0);
+
+    }
 
     fn layout(
         &mut self,
@@ -215,7 +324,7 @@ impl Widget<State> for CustomWidget {
 }
 
 pub fn main() {
-    let window = WindowDesc::new(|| CustomWidget {}).title(
+    let window = WindowDesc::new(|| CustomWidget::default()).title(
         LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Fancy Colors"),
     );
 
