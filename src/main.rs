@@ -25,7 +25,7 @@ use druid::widget::prelude::*;
 use druid::{
     Affine, AppLauncher, ArcStr, Color, FontDescriptor, LocalizedString, Point, Rect, TextLayout,
     WindowDesc,
-    Data,
+    Data, MouseEvent
 };
 
 use std::rc::Rc;
@@ -40,6 +40,11 @@ struct CustomWidget {
     bottom_plane: Rc<PGA3D>,
     left_plane: Rc<PGA3D>,
     right_plane: Rc<PGA3D>,
+
+    center_point: Rc<PGA3D>,
+    left: f32, top: f32, scale: f32,
+
+    pixel_width: f64, pixel_height: f64,
 }
 
 // impl Default for CustomWidget {
@@ -60,12 +65,12 @@ fn drawtext(ctx: &mut impl RenderContext) {
 ;
 }
 
-#[derive(Clone,Default)]
-struct PGA {
-    multivector: PGA3D,
-}
+// #[derive(Clone,Default)]
+// struct PGA {
+//     multivector: PGA3D,
+// }
 
-// impl Data for PGA3G {
+// impl Data for PGA3D {
 
 // }
 
@@ -105,29 +110,35 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
         let center_x = (state.desired_right + state.desired_left) / 2.;
         let center_y = (state.desired_top   + state.desired_bottom) / 2.;
 
+        self.pixel_width = window.width;
+        self.pixel_height = window.height;
         let window_aspect_ratio  =  window.width / window.height;
 
-        let mut top    = state.desired_top;
-        let mut left   = state.desired_left;
+        self.top    = state.desired_top;
+        self.left   = state.desired_left;
         let mut right  = state.desired_right;
         let mut bottom = state.desired_bottom;
 
         if window_aspect_ratio > desired_aspect_ratio as f64 {
             // actual window is wider than desired viewport
-            let half_width = (desired_height as f64 / window.height) * 0.5 * window.width;
+            self.scale = desired_height / window.height as f32;
+            let half_width = self.scale * 0.5 * window.width as f32;
             right = center_x + half_width as f32;
-            left  = center_x - half_width as f32;
+            self.left  = center_x - half_width as f32;
         } else {
             // actual window is taller than desired viewport
-            let half_height = (desired_width as f64 / window.width) * 0.5 * window.height;
-            top    = center_y + half_height as f32;
+            self.scale = desired_width / window.width as f32;
+            let half_height = self.scale * 0.5 * window.height as f32;
+            self.top    = center_y + half_height as f32;
             bottom = center_y - half_height as f32;
         }
 
-        self.top_plane    = Rc::new(PGA3D::plane(0., top, 0., 1.));
-        self.left_plane   = Rc::new(PGA3D::plane(left, 0., 0., 1.));
-        self.right_plane  = Rc::new(PGA3D::plane(right, 0., 0., 1.));
-        self.bottom_plane = Rc::new(PGA3D::plane(0., bottom, 0., 1.));
+        self.top_plane    = Rc::new(PGA3D::plane(0., 1., 0., self.top).normalized());
+        self.left_plane   = Rc::new(PGA3D::plane(1., 0., 0., self.left).normalized());
+        self.right_plane  = Rc::new(PGA3D::plane(1., 0., 0., right).normalized());
+        self.bottom_plane = Rc::new(PGA3D::plane(0., 1., 0., bottom).normalized());
+
+        self.center_point = Rc::new(PGA3D::point(center_x, center_y, 0.));
 
         println!("top: {}", self.top_plane);
         println!("bottom: {}", self.bottom_plane);
@@ -137,6 +148,103 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
 
 
     }
+
+    pub fn draw_point(&self, ctx: &mut PaintCtx, point: &PGA3D) {
+        let fill_color = Color::rgba8(0xa3, 0xff, 0xff, 0xFF);
+
+        ctx.fill(
+            Circle::new(Point::new(
+                ((point.normalized().get032() - self.left) / self.scale) as f64, 
+                ((self.top - point.normalized().get013())  / self.scale) as f64), 15.0),
+            &fill_color,
+            
+        );
+
+    }
+
+    fn find_closest(&self, point: &PGA3D, candidate: &PGA3D, best: &mut PGA3D, best_dist: &mut f32, second_best: &mut PGA3D, second_best_dist: &mut f32) {
+        // let dist = (point.Dual() ^ candidate.Dual()).Dual().norm();
+        let dist = (point.normalized() & candidate.normalized()).norm();
+
+        if dist < *best_dist {
+            *best = PGA3D::clone(&candidate).normalized();
+            *best_dist = dist;
+        } 
+        else if dist < *second_best_dist {
+            *second_best = PGA3D::clone(&candidate).normalized();
+            *second_best_dist = dist;
+        }
+
+    }
+
+    pub fn draw_line(&self, ctx: &mut PaintCtx, line: &PGA3D) {
+        let mut best = PGA3D::zero();
+        let mut best_dist = 1000000.;
+        let mut second_best = PGA3D::zero();
+        let mut second_best_dist = 1000000.;
+
+        self.find_closest(&(self.center_point), 
+            &(line ^ &(*self.top_plane))
+            , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
+        self.find_closest(&(self.center_point), 
+            &(line ^ &(*self.left_plane))
+            , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
+        self.find_closest(&(self.center_point), 
+            &(line ^ &(*self.right_plane))
+            , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
+        self.find_closest(&(self.center_point), 
+            &(line ^ &(*self.bottom_plane))
+            , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
+        // find_closest(self, point, &(point^&(*self.left_plane)), best, best_dist, second_best, second_best_dist);
+        // find_closest(self, point, &(point^&(*self.right_plane)), best, best_dist, second_best, second_best_dist);
+        // find_closest(self, point, &(point^&(*self.bottom_plane)), best, best_dist, second_best, second_best_dist);
+
+        let fill_color = Color::rgba8(0xff, 0x33, 0xa3, 0xff);
+
+        ctx.fill(
+            Circle::new(Point::new(
+                ((best.normalized().get032() - self.left) / self.scale) as f64, 
+                ((self.top - best.normalized().get013())  / self.scale) as f64), 15.0),
+            &fill_color,            
+        );
+
+        ctx.fill(
+            Circle::new(Point::new(
+                ((second_best.normalized().get032() - self.left) / self.scale) as f64, 
+                ((self.top - second_best.normalized().get013())  / self.scale) as f64), 15.0),
+            &fill_color,            
+        );
+
+        let mut path = BezPath::new();
+        path.move_to(Point::new(
+                ((best.normalized().get032() - self.left) / self.scale) as f64, 
+                ((self.top - best.normalized().get013())  / self.scale) as f64));
+        path.line_to(Point::new(
+                ((second_best.normalized().get032() - self.left) / self.scale) as f64, 
+                ((self.top - second_best.normalized().get013())  / self.scale) as f64));
+        //path.quad_to((80.0, 90.0), (size.width, size.height));
+        // Create a color
+        let stroke_color = Color::rgb8(255,0, 255);
+        // Stroke the path with thickness 1.0
+        ctx.stroke(path, &stroke_color, 1.0);
+
+
+    }
+
+    pub fn mouse_move(&self, mouse: &MouseEvent) {
+        
+        println!("mouse {:?}", mouse);
+        let x_portion = (mouse.pos.x / self.pixel_width);
+        let x_plane = (self.left_plane.get1())*(1.-x_portion as f32) + (self.right_plane.get1())*x_portion as f32;
+        let y_portion = (mouse.pos.y / self.pixel_height);
+        let y_plane = self.top_plane.get2()*(1.-y_portion as f32) + self.bottom_plane.get2()*y_portion as f32;
+        // let mouse_point = (x_plane^y_plane.normalized()^PGA3D::e3());
+        // let mouse_y = mouse.pos.y;
+        // let y_plane = 
+        println!("mosue pos {} {}",x_plane,y_plane);
+        // println!("mosue pos {} {}",mouse_point.get032(), mouse_point.get013())
+    }
+
 }
 
 impl Default for State {
@@ -146,6 +254,10 @@ impl Default for State {
             desired_bottom: -2., 
             desired_right: 2., 
             desired_top: 2.,
+            // desired_left: -0., 
+            // desired_bottom: -1., 
+            // desired_right: 4., 
+            // desired_top: 3.,
             points: Rc::new(Vec::new()),
         // State{left: -2., bottom: -2., right: 2., max_y: 2.,points: Rc::new(RefCell::new(Vec::new()))
             x:0.,y:0.,
@@ -168,6 +280,9 @@ impl Widget<State> for CustomWidget {
             }
             Event::KeyDown(e) => {
                 println!("key down event {:?}", e);
+            }
+            Event::MouseMove(e) => {
+                self.mouse_move(e);
             }
             _ => {
                 println!("unhandled event {:?}", event);
@@ -247,19 +362,46 @@ impl Widget<State> for CustomWidget {
         // and we only want to clear this widget's area.
 
         // Create an arbitrary bezier path
-        let mut path = BezPath::new();
-        path.move_to(Point::ORIGIN);
-        path.quad_to((80.0, 90.0), (size.width, size.height));
-        // Create a color
-        let stroke_color = Color::rgb8(0, 128, 0);
-        // Stroke the path with thickness 1.0
-        ctx.stroke(path, &stroke_color, 1.0);
+        // let mut path = BezPath::new();
+        // path.move_to(Point::ORIGIN);
+        // path.quad_to((80.0, 90.0), (size.width, size.height));
+        // // Create a color
+        // let stroke_color = Color::rgb8(255,0, 255);
+        // // Stroke the path with thickness 1.0
+        // ctx.stroke(path, &stroke_color, 1.0);
+
+
+        let p1 = &(PGA3D::point(0.,0.4,0.));
+        let p2 = &(PGA3D::point(1.44,0.,0.));
+
+        let l = &(p1&p2);
+
+        let topi = &(l^&(*self.top_plane));
+        println!("topint {}", *self.top_plane);
+        println!("topint {}", topi.normalized());
+
+        let righti = &(l^&(*self.right_plane));
+        println!("rightint {}", righti);
+        println!("rightint {}", righti.normalized());
+
+        let plan1 = (&PGA3D::plane(0.,1.,0.,1.));
+        let plan2 = (&PGA3D::plane(0.1,1.,0.,2.));
+
+        self.draw_point(ctx, p1);
+        self.draw_point(ctx, p2);
+
+        self.draw_line(ctx, l);
+
+        println!("inters {}", plan1.normalized()^plan2.normalized());
+        // 0 = same plane (intersect at origin)
+        // -1e02 parallel planes separated but parallel
+        // 0.0995037e01 + -0.9950371e02 + -0.0995037e12 intersect in line
 
         // Rectangles: the path for practical people
-        let rect = Rect::from_origin_size((10., 10.), (100., 100.));
+//        let rect = Rect::from_origin_size((10., 10.), (100., 100.));
         // Note the Color:rgba8 which includes an alpha channel (7F in this case)
-        let fill_color = Color::rgba8(0x73, 0x73, 0x73, 0xFF);
-        ctx.fill(rect, &fill_color);
+        let fill_color = Color::rgba8(0xa3, 0xa3, 0xa3, 0xFF);
+//        ctx.fill(rect, &fill_color);
 
 
         ctx.stroke(

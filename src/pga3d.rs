@@ -53,6 +53,24 @@ impl PGA3D {
     pub fn e032() -> Self { PGA3D::new(1.0, 13) }
     pub fn e123() -> Self { PGA3D::new(1.0, 14) }
     pub fn e0123() -> Self { PGA3D::new(1.0, 15) }
+
+
+    pub fn get0(&self) -> f32 { self.mvec[1] }
+    pub fn get1(&self) -> f32 { self.mvec[2] }
+    pub fn get2(&self) -> f32 { self.mvec[3] }
+    pub fn get3(&self) -> f32 { self.mvec[4] }
+    pub fn get01(&self) -> f32 { self.mvec[5] }
+    pub fn get02(&self) -> f32 { self.mvec[6] }
+    pub fn get03(&self) -> f32 { self.mvec[7] }
+    pub fn get12(&self) -> f32 { self.mvec[8] }
+    pub fn get31(&self) -> f32 { self.mvec[9] }
+    pub fn get23(&self) -> f32 { self.mvec[10] }
+    pub fn get021(&self) -> f32 { self.mvec[11] }
+    pub fn get013(&self) -> f32 { self.mvec[12] }
+    pub fn get032(&self) -> f32 { self.mvec[13] }
+    pub fn get123(&self) -> f32 { self.mvec[14] }
+    pub fn get0123(&self) -> f32 { self.mvec[15] }
+
 }
 
 impl Index<usize> for PGA3D {
