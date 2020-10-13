@@ -106,7 +106,7 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
         let desired_width  = state.desired_right - state.desired_left;
         let desired_height = state.desired_top   - state.desired_bottom;
         let desired_aspect_ratio = desired_width / desired_height;
-
+println!("desired aspect {} {} {}",desired_width, desired_height,desired_aspect_ratio);
         let center_x = (state.desired_right + state.desired_left) / 2.;
         let center_y = (state.desired_top   + state.desired_bottom) / 2.;
 
@@ -133,20 +133,23 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
             bottom = center_y - half_height as f32;
         }
 
-        self.top_plane    = Rc::new(PGA3D::plane(0., 1., 0., self.top).normalized());
-        self.left_plane   = Rc::new(PGA3D::plane(1., 0., 0., self.left).normalized());
-        self.right_plane  = Rc::new(PGA3D::plane(1., 0., 0., right).normalized());
-        self.bottom_plane = Rc::new(PGA3D::plane(0., 1., 0., bottom).normalized());
+
+
+        self.top_plane    = Rc::new(PGA3D::plane(0., -1., 0., self.top));
+        self.left_plane   = Rc::new(PGA3D::plane(-1.,  0., 0., self.left));
+        self.right_plane  = Rc::new(PGA3D::plane(-1., 0., 0., right));
+        self.bottom_plane = Rc::new(PGA3D::plane(0., -1., 0., bottom));
 
         self.center_point = Rc::new(PGA3D::point(center_x, center_y, 0.));
 
-        println!("top: {}", self.top_plane);
-        println!("bottom: {}", self.bottom_plane);
-        println!("left: {}", self.left_plane);
-        println!("right: {}", self.right_plane);
-
-
-
+        // println!("top: {}", self.top_plane);
+        // println!("bottom: {}", self.bottom_plane);
+        // println!("left: {}", self.left_plane);
+        // println!("right: {}", self.right_plane);
+        // println!("cx: {}", center_x);
+        // println!("cy: {}", center_y);
+        // println!("left: {}", self.left);
+        // println!("right: {}", right);
     }
 
     pub fn draw_point(&self, ctx: &mut PaintCtx, point: &PGA3D) {
@@ -154,8 +157,8 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
 
         ctx.fill(
             Circle::new(Point::new(
-                ((point.normalized().get032() - self.left) / self.scale) as f64, 
-                ((self.top - point.normalized().get013())  / self.scale) as f64), 15.0),
+                ((point.get032() - self.left) / self.scale) as f64, 
+                ((self.top - point.get013())  / self.scale) as f64), 15.0),
             &fill_color,
             
         );
@@ -165,13 +168,16 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
     fn find_closest(&self, point: &PGA3D, candidate: &PGA3D, best: &mut PGA3D, best_dist: &mut f32, second_best: &mut PGA3D, second_best_dist: &mut f32) {
         // let dist = (point.Dual() ^ candidate.Dual()).Dual().norm();
         let dist = (point.normalized() & candidate.normalized()).norm();
-
+println!("nrom {}",dist);
         if dist < *best_dist {
-            *best = PGA3D::clone(&candidate).normalized();
+            *second_best = PGA3D::clone(best);
+            *second_best_dist = *best_dist;
+
+            *best = PGA3D::clone(candidate);
             *best_dist = dist;
         } 
         else if dist < *second_best_dist {
-            *second_best = PGA3D::clone(&candidate).normalized();
+            *second_best = PGA3D::clone(&candidate);
             *second_best_dist = dist;
         }
 
@@ -184,6 +190,9 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
         let mut second_best_dist = 1000000.;
 
         self.find_closest(&(self.center_point), 
+            &(line ^ &(*self.bottom_plane))
+            , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
+        self.find_closest(&(self.center_point), 
             &(line ^ &(*self.top_plane))
             , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
         self.find_closest(&(self.center_point), 
@@ -192,9 +201,7 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
         self.find_closest(&(self.center_point), 
             &(line ^ &(*self.right_plane))
             , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
-        self.find_closest(&(self.center_point), 
-            &(line ^ &(*self.bottom_plane))
-            , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
+
         // find_closest(self, point, &(point^&(*self.left_plane)), best, best_dist, second_best, second_best_dist);
         // find_closest(self, point, &(point^&(*self.right_plane)), best, best_dist, second_best, second_best_dist);
         // find_closest(self, point, &(point^&(*self.bottom_plane)), best, best_dist, second_best, second_best_dist);
@@ -203,25 +210,31 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
 
         ctx.fill(
             Circle::new(Point::new(
-                ((best.normalized().get032() - self.left) / self.scale) as f64, 
-                ((self.top - best.normalized().get013())  / self.scale) as f64), 15.0),
+                ((best.get032()/best.get123() - self.left) / self.scale) as f64, 
+                //0.),
+                ((self.top - best.get013()/best.get123())  / self.scale) as f64),
+                 8.0),
             &fill_color,            
         );
 
         ctx.fill(
             Circle::new(Point::new(
-                ((second_best.normalized().get032() - self.left) / self.scale) as f64, 
-                ((self.top - second_best.normalized().get013())  / self.scale) as f64), 15.0),
+                ((second_best.get032()/second_best.get123() - self.left) / self.scale) as f64, 
+                //0.),
+                ((self.top - second_best.get013()/second_best.get123())  / self.scale) as f64),
+                 8.0),
             &fill_color,            
         );
 
         let mut path = BezPath::new();
         path.move_to(Point::new(
-                ((best.normalized().get032() - self.left) / self.scale) as f64, 
-                ((self.top - best.normalized().get013())  / self.scale) as f64));
+                ((best.get032()/best.get123() - self.left) / self.scale) as f64, 
+                //0.),
+                ((self.top - best.get013()/best.get123())  / self.scale) as f64));
         path.line_to(Point::new(
-                ((second_best.normalized().get032() - self.left) / self.scale) as f64, 
-                ((self.top - second_best.normalized().get013())  / self.scale) as f64));
+                ((second_best.get032()/second_best.get123() - self.left) / self.scale) as f64, 
+                //0.),
+                ((self.top - second_best.get013()/second_best.get123())  / self.scale) as f64));
         //path.quad_to((80.0, 90.0), (size.width, size.height));
         // Create a color
         let stroke_color = Color::rgb8(255,0, 255);
@@ -250,10 +263,10 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
 impl Default for State {
     fn default() -> State {
         State{uninitialized: true, 
-            desired_left: -2., 
-            desired_bottom: -2., 
+            desired_left: 0., 
+            desired_bottom: -0.3, 
             desired_right: 2., 
-            desired_top: 2.,
+            desired_top: 2.5,
             // desired_left: -0., 
             // desired_bottom: -1., 
             // desired_right: 4., 
@@ -371,28 +384,16 @@ impl Widget<State> for CustomWidget {
         // ctx.stroke(path, &stroke_color, 1.0);
 
 
-        let p1 = &(PGA3D::point(0.,0.4,0.));
-        let p2 = &(PGA3D::point(1.44,0.,0.));
+        let p1 = &(PGA3D::point(0.,1.4,0.));
+        let p2 = &(PGA3D::point(0.94,0.,0.));
 
         let l = &(p1&p2);
-
-        let topi = &(l^&(*self.top_plane));
-        println!("topint {}", *self.top_plane);
-        println!("topint {}", topi.normalized());
-
-        let righti = &(l^&(*self.right_plane));
-        println!("rightint {}", righti);
-        println!("rightint {}", righti.normalized());
-
-        let plan1 = (&PGA3D::plane(0.,1.,0.,1.));
-        let plan2 = (&PGA3D::plane(0.1,1.,0.,2.));
 
         self.draw_point(ctx, p1);
         self.draw_point(ctx, p2);
 
         self.draw_line(ctx, l);
 
-        println!("inters {}", plan1.normalized()^plan2.normalized());
         // 0 = same plane (intersect at origin)
         // -1e02 parallel planes separated but parallel
         // 0.0995037e01 + -0.9950371e02 + -0.0995037e12 intersect in line
