@@ -1,5 +1,5 @@
 [package]
-name = "pga-druid"
+name = "cga-druid_drawing_app"
 version = "0.1.0"
 authors = [""]
 edition = "2018"

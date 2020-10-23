@@ -106,7 +106,7 @@ pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
         let desired_width  = state.desired_right - state.desired_left;
         let desired_height = state.desired_top   - state.desired_bottom;
         let desired_aspect_ratio = desired_width / desired_height;
-println!("desired aspect {} {} {}",desired_width, desired_height,desired_aspect_ratio);
+
         let center_x = (state.desired_right + state.desired_left) / 2.;
         let center_y = (state.desired_top   + state.desired_bottom) / 2.;
 
@@ -245,8 +245,6 @@ println!("nrom {}",dist);
     }
 
     pub fn mouse_move(&self, mouse: &MouseEvent) {
-        
-        println!("mouse {:?}", mouse);
         let x_portion = (mouse.pos.x / self.pixel_width);
         let x_plane = (self.left_plane.get1())*(1.-x_portion as f32) + (self.right_plane.get1())*x_portion as f32;
         let y_portion = (mouse.pos.y / self.pixel_height);
