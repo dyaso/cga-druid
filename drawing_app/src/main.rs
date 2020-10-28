@@ -1,336 +1,315 @@
-// Copyright 2019 The Druid Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
+#![allow(unused_assignments)]
+#![allow(unused_variables)]
+#![allow(unused_parens)]
+#![allow(unused_imports)]
 
-//! An example of a custom drawing widget.
-
-use druid::kurbo::{BezPath,Circle};
-use druid::piet::{FontFamily, ImageFormat, InterpolationMode, FontWeight, FontStyle,
-
-};
+use druid::kurbo::{BezPath, Circle};
+use druid::piet::{FontFamily, FontStyle, FontWeight, ImageFormat, InterpolationMode};
 
 use druid::kurbo;
 
 use druid::widget::prelude::*;
 use druid::{
-    Affine, AppLauncher, ArcStr, Color, FontDescriptor, LocalizedString, Point, Rect, TextLayout,
-    WindowDesc,
-    Data, MouseEvent
+    Affine, AppLauncher, ArcStr, Color, Data, FontDescriptor, LocalizedString, MouseEvent,
+    Point as DruidPoint, Rect, TextLayout, WindowDesc,
 };
 
-use std::rc::Rc;
-// use std::cell::RefCell;
+//use klein::{ApplyOp, Line, Plane, Point, Rotor, Translator};
 
-mod pga3d;
-use pga3d::PGA3D;
+mod cga2d;
+use cga2d::*;
 
 #[derive(Default)]
 struct CustomWidget {
-    top_plane: Rc<PGA3D>,
-    bottom_plane: Rc<PGA3D>,
-    left_plane: Rc<PGA3D>,
-    right_plane: Rc<PGA3D>,
+    lower_y: f64,
+    upper_y: f64,
+    left_x: f64,
+    right_x: f64,
 
-    center_point: Rc<PGA3D>,
-    left: f32, top: f32, scale: f32,
+    // lower_plane: Plane,
+    // upper_plane: Plane,
+    // left_plane: Plane,
+    // right_plane: Plane,
 
-    pixel_width: f64, pixel_height: f64,
+    //center_point: Rc<PGA3D>,
+    // center_point: Point,
+    left: f64,
+    top: f64,
+    scale: f64,
+
+    window_pixels: kurbo::Size,
 }
 
-// impl Default for CustomWidget {
-//     fn default() -> CustomWidget {
-//         CustomWidget{
-//             top_plane: Rc::new(PGA3D::zero()),
-//             bottom_plane: Rc::new(PGA3D::zero()),
-//             left_plane: Rc::new(PGA3D::zero()),
-//             right_plane: Rc::new(PGA3D::zero()),
-//         }
+// #[derive(Copy, Clone)]
+// struct FlatlandPoint {
+//     line: Line,
+// }
+
+// impl From<Point> for FlatlandPoint {
+//     fn from(p: Point) -> FlatlandPoint {
+//         FlatlandPoint { line: p & Point::new(0., 0., 1.) }
 //     }
 // }
 
-fn drawtext(ctx: &mut impl RenderContext) {
-     let layout2 = ctx
-        .text()
-        // .new_text_layout("Helloo piet!")
-;
-}
+// // impl From<&FlatlandPoint> for Line {
+// //     fn from(zp_pt: &FlatlandPoint) -> Line {
+// //         zp_pt.line
+// //     }
+// // }
 
-// #[derive(Clone,Default)]
-// struct PGA {
-//     multivector: PGA3D,
+// impl From<&FlatlandPoint> for Point {
+//     fn from(zp_pt: &FlatlandPoint) -> Point {
+//         zp_pt.line ^ Plane::new(0.,0.,1.,0.)
+//     }
+// }
+// impl From<FlatlandPoint> for Point {
+//     fn from(zp_pt: FlatlandPoint) -> Point {
+//         zp_pt.line ^ Plane::new(0.,0.,1.,0.)
+//     }
 // }
 
-// impl Data for PGA3D {
+// // use std::ops::{BitXor, BitAnd};
 
+// // impl BitXor<FlatlandPoint> for FlatlandPoint {
+// //     type Output = Line;
+// //     #[inline]
+// //     fn bitxor(self, rhs: FlatlandPoint) -> Self::Output {
+// //         Point::from(self) & Point::from(rhs)
+// //     }
+// // }
+
+// // impl BitAnd<FlatlandPoint> for FlatlandPoint {
+// //     type Output = Line;
+// //     #[inline]
+// //     fn bitand(self, rhs: FlatlandPoint) -> Self::Output {
+// //         Point::from(self) & Point::from(rhs)
+// //     }
+// // }
+
+// impl FlatlandPoint {
+
+//     pub fn new<X: Into<f32>, Y: Into<f32>>(x: X, y: Y) -> FlatlandPoint {
+//         FlatlandPoint::from(Point::new(x.into(), y.into(), 0.))
+//     }
 // }
 
-#[derive(Clone,Data)]
-struct State {
-    uninitialized: bool,
-    desired_left: f32,
-    desired_right: f32,
-    desired_bottom: f32,
-    desired_top: f32,
+// struct FlatlandLine {
+//     plane: Plane,
+// }
 
-    points: Rc<Vec<Dot>>,
-    // points: Rc<RefCell<Vec<Dot>>>,
-    x: f32, y:f32,
-}
+// impl From<Line> for FlatlandLine {
+//     fn from(l: Line) -> FlatlandLine {
+//         FlatlandLine { plane: l & Point::new(0., 0., 1.) }
+//     }
+// }
 
-trait GeometricConstruction {
-    fn add_dot(&mut self, label: String, x: f32, y:f32);
-}
-
-impl GeometricConstruction for State {
-    fn add_dot(&mut self, label: String, x: f32, y:f32) {
-
-        // self.points.push(Dot{label: label, x:x, y:y});
-        Rc::get_mut(&mut self.points).unwrap().push(Dot{label: label, x:x, y:y});
-        // self.points.push(Dot{label: label, x:x, y:y});
-        // (Rc::get_mut(&mut self.points).unwrap()).borrow_mut().push(Dot{label: label, x:x, y:y});
-    }
-}
 
 impl CustomWidget {
-pub    fn establish_boundaries(&mut self, state: &State, window: &kurbo::Size) {
-        let desired_width  = state.desired_right - state.desired_left;
-        let desired_height = state.desired_top   - state.desired_bottom;
+    fn to_druid_point(&self, p: &Conformal2D) -> DruidPoint {
+        let pn = p; //.normalized();
+
+        let x = 0.;
+        let y = 0.;
+
+        DruidPoint::new(
+            (x as f64 - self.left) / self.scale,
+            (self.top - y as f64) / self.scale,
+        )
+    }
+
+    fn new() -> CustomWidget {
+        CustomWidget {
+            lower_y: -2.,
+            upper_y: 2.,
+            left_x: -2.,
+            right_x: 2.,
+            ..Default::default()
+        }
+    }
+    pub fn set_window_boundary_planes(&mut self, state: &State, window: &kurbo::Size) {
+        let desired_width = self.right_x - self.left_x;
+        let desired_height = self.upper_y - self.lower_y;
         let desired_aspect_ratio = desired_width / desired_height;
 
-        let center_x = (state.desired_right + state.desired_left) / 2.;
-        let center_y = (state.desired_top   + state.desired_bottom) / 2.;
+        let center_x = (self.right_x + self.left_x) / 2.;
+        let center_y = (self.upper_y + self.lower_y) / 2.;
 
-        self.pixel_width = window.width;
-        self.pixel_height = window.height;
-        let window_aspect_ratio  =  window.width / window.height;
+        self.window_pixels = *window;
+        let window_aspect_ratio = window.width / window.height;
 
-        self.top    = state.desired_top;
-        self.left   = state.desired_left;
-        let mut right  = state.desired_right;
-        let mut bottom = state.desired_bottom;
+        self.top = self.upper_y;
+        self.left = self.left_x;
+        let mut right = self.right_x;
+        let mut bottom = self.lower_y;
 
-        if window_aspect_ratio > desired_aspect_ratio as f64 {
+        if window_aspect_ratio > desired_aspect_ratio {
             // actual window is wider than desired viewport
-            self.scale = desired_height / window.height as f32;
-            let half_width = self.scale * 0.5 * window.width as f32;
-            right = center_x + half_width as f32;
-            self.left  = center_x - half_width as f32;
+            self.scale = desired_height / window.height;
+            let half_width = self.scale * 0.5 * window.width;
+            right = center_x + half_width;
+            self.left = center_x - half_width;
         } else {
             // actual window is taller than desired viewport
-            self.scale = desired_width / window.width as f32;
-            let half_height = self.scale * 0.5 * window.height as f32;
-            self.top    = center_y + half_height as f32;
-            bottom = center_y - half_height as f32;
+            self.scale = desired_width / window.width;
+            let half_height = self.scale * 0.5 * window.height;
+            self.top = center_y + half_height;
+            bottom = center_y - half_height;
         }
 
+        // self.lower_plane = Plane::new(0., 1., 0., bottom as f32);
+        // self.upper_plane = Plane::new(0., 1., 0., self.top as f32);
+        // self.left_plane = Plane::new(1., 0., 0., self.left as f32);
+        // self.right_plane = Plane::new(1., 0., 0., right as f32);
 
-
-        self.top_plane    = Rc::new(PGA3D::plane(0., -1., 0., self.top));
-        self.left_plane   = Rc::new(PGA3D::plane(-1.,  0., 0., self.left));
-        self.right_plane  = Rc::new(PGA3D::plane(-1., 0., 0., right));
-        self.bottom_plane = Rc::new(PGA3D::plane(0., -1., 0., bottom));
-
-        self.center_point = Rc::new(PGA3D::point(center_x, center_y, 0.));
-
-        // println!("top: {}", self.top_plane);
-        // println!("bottom: {}", self.bottom_plane);
-        // println!("left: {}", self.left_plane);
-        // println!("right: {}", self.right_plane);
-        // println!("cx: {}", center_x);
-        // println!("cy: {}", center_y);
-        // println!("left: {}", self.left);
-        // println!("right: {}", right);
+        // self.center_point = Point::new(center_x as f32, center_y as f32, 0.);
     }
 
-    pub fn draw_point(&self, ctx: &mut PaintCtx, point: &PGA3D) {
-        let fill_color = Color::rgba8(0xa3, 0xff, 0xff, 0xFF);
+    // fn dist(a: &Point, b: &Point) -> f32 {
+    //     let d = (a.normalized() & b.normalized()).norm();
 
-        ctx.fill(
-            Circle::new(Point::new(
-                ((point.get032() - self.left) / self.scale) as f64, 
-                ((self.top - point.get013())  / self.scale) as f64), 15.0),
-            &fill_color,
-            
-        );
+    //     return if f32::is_nan(d) { 1000000. } else { d };
+    // }
 
-    }
+    // pub fn draw_line(&self, ctx: &mut PaintCtx, line: &Line) {
+        // let mut intersections = Vec::<Point>::new();
+        // intersections.push(*line ^ self.lower_plane);
+        // intersections.push(*line ^ self.upper_plane);
+        // intersections.push(*line ^ self.left_plane);
+        // intersections.push(*line ^ self.right_plane);
 
-    fn find_closest(&self, point: &PGA3D, candidate: &PGA3D, best: &mut PGA3D, best_dist: &mut f32, second_best: &mut PGA3D, second_best_dist: &mut f32) {
-        // let dist = (point.Dual() ^ candidate.Dual()).Dual().norm();
-        let dist = (point.normalized() & candidate.normalized()).norm();
-println!("nrom {}",dist);
-        if dist < *best_dist {
-            *second_best = PGA3D::clone(best);
-            *second_best_dist = *best_dist;
+        // intersections.sort_by(|a, b| {
+        //     CustomWidget::dist(a, &self.center_point)
+        //         .partial_cmp(&CustomWidget::dist(b, &self.center_point))
+        //         .unwrap()
+        // });
 
-            *best = PGA3D::clone(candidate);
-            *best_dist = dist;
-        } 
-        else if dist < *second_best_dist {
-            *second_best = PGA3D::clone(&candidate);
-            *second_best_dist = dist;
-        }
+        // let end1 = &intersections[0].normalized();
+        // let end2 = &intersections[1].normalized();
+        // // self.draw_point(ctx, end1);
+        // // self.draw_point(ctx, end2);
+        // let mut path = BezPath::new();
+        // path.move_to(DruidPoint::new(
+        //     ((end1.x() as f64 - self.left) / self.scale),
+        //     ((self.top - end1.y() as f64) / self.scale),
+        // ));
+        // path.line_to(DruidPoint::new(
+        //     ((end2.x() as f64 - self.left) / self.scale),
+        //     ((self.top - end2.y() as f64) / self.scale),
+        // ));
+        // let stroke_color = Color::rgb8(150, 150, 150);
+        // ctx.stroke(path, &stroke_color, 1.0);
+    // }
 
-    }
+    // pub fn draw_point(&self, ctx: &mut PaintCtx, highlight: bool) {
+    //     let point = Point::from(zeepoint);
+    //     let mut fill_color = Color::rgba8(0xa3, 0xff, 0xff, 0xFF);
+    //     if highlight {
+    //         fill_color = Color::rgba8(0xff, 0x70, 0x70, 0xff);
+    //     }
+    //     let dp = DruidPoint::new(0.,0.,
+    //                 // ((point.x() as f64 - self.left) / self.scale),
+    //                 // ((self.top - point.y() as f64) / self.scale),
+    //             );
 
-    pub fn draw_line(&self, ctx: &mut PaintCtx, line: &PGA3D) {
-        let mut best = PGA3D::zero();
-        let mut best_dist = 1000000.;
-        let mut second_best = PGA3D::zero();
-        let mut second_best_dist = 1000000.;
+    //     ctx.fill(
+    //         Circle::new(
+    //             dp,
+    //             15.0,
+    //         ),
+    //         &fill_color,
+    //     );
+    //     ctx.fill(
+    //         Circle::new(
+    //             dp,
+    //             5.0,
+    //         ),
+    //         &Color::WHITE,
+    //     );
+    // }
 
-        self.find_closest(&(self.center_point), 
-            &(line ^ &(*self.bottom_plane))
-            , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
-        self.find_closest(&(self.center_point), 
-            &(line ^ &(*self.top_plane))
-            , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
-        self.find_closest(&(self.center_point), 
-            &(line ^ &(*self.left_plane))
-            , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
-        self.find_closest(&(self.center_point), 
-            &(line ^ &(*self.right_plane))
-            , &mut best, &mut best_dist, &mut second_best, &mut second_best_dist);
+    pub fn mouse_move(&self, mouse: &MouseEvent, data: &mut State) {
+        // let x_portion = (mouse.pos.x / self.window_pixels.width);
+        // let x_coord = self.left_plane.x() * self.left_plane.d() * (1. - x_portion as f32)
+        //     + (self.right_plane.x() * self.right_plane.d()) * x_portion as f32;
+        // let y_portion = (mouse.pos.y / self.window_pixels.height);
+        // let y_coord = self.upper_plane.y() * self.upper_plane.d() * (1. - y_portion as f32)
+        //     + self.lower_plane.y() * self.lower_plane.d() * y_portion as f32;
+        // // let mouse_point = (x_plane^y_plane.normalized()^PGA3D::e3());
+        // // let mouse_y = mouse.pos.y;
+        // // let y_plane =
 
-        // find_closest(self, point, &(point^&(*self.left_plane)), best, best_dist, second_best, second_best_dist);
-        // find_closest(self, point, &(point^&(*self.right_plane)), best, best_dist, second_best, second_best_dist);
-        // find_closest(self, point, &(point^&(*self.bottom_plane)), best, best_dist, second_best, second_best_dist);
+        // let mouse = Point::new(x_coord, y_coord, 0.);
+        // data.mouse_over = None;
+        // for (i, p) in data.points.iter().enumerate() {
+        //     // println!("mouse point {} {}",i, (mouse & *p).norm());
+        //     if (mouse & Point::from(p)).norm() < 0.07 {
+        //         println!("over point {}", i);
+        //         data.mouse_over = Some(i);
+        //     }
+        // }
 
-        let fill_color = Color::rgba8(0xff, 0x33, 0xa3, 0xff);
-
-        ctx.fill(
-            Circle::new(Point::new(
-                ((best.get032()/best.get123() - self.left) / self.scale) as f64, 
-                //0.),
-                ((self.top - best.get013()/best.get123())  / self.scale) as f64),
-                 8.0),
-            &fill_color,            
-        );
-
-        ctx.fill(
-            Circle::new(Point::new(
-                ((second_best.get032()/second_best.get123() - self.left) / self.scale) as f64, 
-                //0.),
-                ((self.top - second_best.get013()/second_best.get123())  / self.scale) as f64),
-                 8.0),
-            &fill_color,            
-        );
-
-        let mut path = BezPath::new();
-        path.move_to(Point::new(
-                ((best.get032()/best.get123() - self.left) / self.scale) as f64, 
-                //0.),
-                ((self.top - best.get013()/best.get123())  / self.scale) as f64));
-        path.line_to(Point::new(
-                ((second_best.get032()/second_best.get123() - self.left) / self.scale) as f64, 
-                //0.),
-                ((self.top - second_best.get013()/second_best.get123())  / self.scale) as f64));
-        //path.quad_to((80.0, 90.0), (size.width, size.height));
-        // Create a color
-        let stroke_color = Color::rgb8(255,0, 255);
-        // Stroke the path with thickness 1.0
-        ctx.stroke(path, &stroke_color, 1.0);
-
-
-    }
-
-    pub fn mouse_move(&self, mouse: &MouseEvent) {
-        let x_portion = (mouse.pos.x / self.pixel_width);
-        let x_plane = (self.left_plane.get1())*(1.-x_portion as f32) + (self.right_plane.get1())*x_portion as f32;
-        let y_portion = (mouse.pos.y / self.pixel_height);
-        let y_plane = self.top_plane.get2()*(1.-y_portion as f32) + self.bottom_plane.get2()*y_portion as f32;
-        // let mouse_point = (x_plane^y_plane.normalized()^PGA3D::e3());
-        // let mouse_y = mouse.pos.y;
-        // let y_plane = 
-        println!("mosue pos {} {}",x_plane,y_plane);
         // println!("mosue pos {} {}",mouse_point.get032(), mouse_point.get013())
     }
-
 }
 
-impl Default for State {
-    fn default() -> State {
-        State{uninitialized: true, 
-            desired_left: 0., 
-            desired_bottom: -0.3, 
-            desired_right: 2., 
-            desired_top: 2.5,
-            // desired_left: -0., 
-            // desired_bottom: -1., 
-            // desired_right: 4., 
-            // desired_top: 3.,
-            points: Rc::new(Vec::new()),
-        // State{left: -2., bottom: -2., right: 2., max_y: 2.,points: Rc::new(RefCell::new(Vec::new()))
-            x:0.,y:0.,
-        }
-    }
-}
+use std::rc::Rc;
 
-#[derive(Default,Clone,Data)]
-struct Dot {
-    label: String,
-    x: f32, y: f32
+#[derive(Clone, Data, Default)]
+struct State {
+    points: Rc<Vec<Conformal2D>>,
+    mouse_over: Option<usize>,
+    // mesh: Rc<Vec<Point>>,
+    indices: Rc<Vec<Vec<usize>>>,
+    time: f64,
 }
 
 impl Widget<State> for CustomWidget {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut State, _env: &Env) {
-// ctx.request_focus();
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut State, _env: &Env) {
         match event {
             Event::WindowConnected => {
                 ctx.request_focus();
+                //ctx.request_anim_frame();
             }
             Event::KeyDown(e) => {
                 println!("key down event {:?}", e);
             }
             Event::MouseMove(e) => {
-                self.mouse_move(e);
+                let old = data.mouse_over;
+                self.mouse_move(e, data);
+                if data.mouse_over != old {
+                    ctx.request_paint();
+                }
             }
+            Event::AnimFrame(_interval) => {
+                data.time += 0.01;
+                ctx.request_paint();
+                // ctx.request_anim_frame();
+            }
+
             _ => {
-                println!("unhandled event {:?}", event);
+                println!("unhandled input event {:?}", event);
             }
         }
-        // println!("eeevent {:?}", event);
     }
 
-    fn lifecycle(
-        &mut self,
-        ctx: &mut LifeCycleCtx,
-        event: &LifeCycle,
-        data: &State,
-        _env: &Env,
-    ) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &State, _env: &Env) {
         match event {
             LifeCycle::Size(s) => {
-            //     println!("re
-            // // size! {}x{}", s.width, s.height);
-                self.establish_boundaries(data, s);
+                self.set_window_boundary_planes(data, s);
             }
-            LifeCycle::WidgetAdded => {println!("widg");
-               ctx.register_for_focus();
+            LifeCycle::WidgetAdded => {
+                ctx.register_for_focus();
             }
-            LifeCycle::FocusChanged(true) => {
-               // event.request_focus();
-
-            }
-            _ => {println!("unknown lifecycyle event: {:?}", event)
-            }
+            _ => println!("unhandled lifecycle event: {:?}", event),
         }
-
     }
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &State, _data: &State, _env: &Env) {
-        println!("update event: {}",0);
 
+        // println!("update event: {}", );
     }
 
     fn layout(
@@ -349,12 +328,10 @@ impl Widget<State> for CustomWidget {
         bc.max()
     }
 
-
     // The paint method gets called last, after an event flow.
     // It goes event -> update -> layout -> paint, and each method can influence the next.
     // Basically, anything that changes the appearance of a widget causes a paint.
-    fn paint(&mut self, ctx: &mut PaintCtx
-        , data: &State, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &State, env: &Env) {
         // Let's draw a picture with Piet!
 
         // Clear the whole widget with the color of your choice
@@ -363,11 +340,10 @@ impl Widget<State> for CustomWidget {
         let rect = size.to_rect();
         ctx.fill(rect, &Color::BLACK);
 
-
-        // for p in (&data.points).borrow().iter() {
-        for p in (&data.points).iter() {
-            println!("label: {}", p.label);
-        }
+        // // for p in (&data.points).borrow().iter() {
+        // for p in (&data.points).iter() {
+        //     println!("label: {}", p.label);
+        // }
 
         // Note: ctx also has a `clear` method, but that clears the whole context,
         // and we only want to clear this widget's area.
@@ -381,44 +357,87 @@ impl Widget<State> for CustomWidget {
         // // Stroke the path with thickness 1.0
         // ctx.stroke(path, &stroke_color, 1.0);
 
+        for (i, p) in data.points.iter().enumerate() {
+            let mut mouse_is_over = false;
+            if let Some(idx) = data.mouse_over {
+                if idx == i {
+                    mouse_is_over = true;
+                }
+            }
 
-        let p1 = &(PGA3D::point(0.,1.4,0.));
-        let p2 = &(PGA3D::point(0.94,0.,0.));
+            // self.draw_point(ctx, p, mouse_is_over);
 
-        let l = &(p1&p2);
+        }
 
-        self.draw_point(ctx, p1);
-        self.draw_point(ctx, p2);
+        // let l = p1 & p2;
 
-        self.draw_line(ctx, l);
+        // self.draw_point(ctx, &p1, over1);
+        // self.draw_point(ctx, p2, over2);
 
-        // 0 = same plane (intersect at origin)
-        // -1e02 parallel planes separated but parallel
-        // 0.0995037e01 + -0.9950371e02 + -0.0995037e12 intersect in line
+            // let l2 = &(Point::new(0.3, 0., 0.) & Point::new(0., 1., 0.));
 
-        // Rectangles: the path for practical people
-//        let rect = Rect::from_origin_size((10., 10.), (100., 100.));
-        // Note the Color:rgba8 which includes an alpha channel (7F in this case)
+            // let Flatland = Plane::new(0., 0., 1., 0.);
+
+            // let z1 = Point::new(0., 0., 1.);
+//        let pz = p1 + z1;
+        // println!("{}", p1);
+        // println!("{}", pz);
+
+//        let trans = Translator::translator(1., 0., 0., 1.);
+
+//        let plan = l | Flatland;
+        // let plan = (p1 & p2 & Point::direction(0., 0., 1.));
+
+        // self.draw_line(ctx, &l);
+        // self.draw_line(ctx, l2);
+
+//        let int = *l2 ^ plan;
+        // self.draw_point(ctx, &int.normalized(), false);
+
+        // let zAxis =
+        //let p = *l & (*l2 ^ Point::direction(0., 0., 1.));
+
+        // println!("{}", plan);
+        // self.draw_point(ctx, &p);
+
+        //         // 0 = same plane (intersect at origin)
+        //         // -1e02 parallel planes separated but parallel
+        //         // 0.0995037e01 + -0.9950371e02 + -0.0995037e12 intersect in line
+
+        //         // Rectangles: the path for practical people
+        // //        let rect = Rect::from_origin_size((10., 10.), (100., 100.));
+        //         // Note the Color:rgba8 which includes an alpha channel (7F in this case)
         let fill_color = Color::rgba8(0xa3, 0xa3, 0xa3, 0xFF);
-//        ctx.fill(rect, &fill_color);
+        // //        ctx.fill(rect, &fill_color);
 
+        //         ctx.stroke(
+        //             Circle::new(Point::new(data.x as f64, data.y as f64), 15.0),
+        //             &fill_color,
+        //             5.0,
+        //         );
+        // let r = Rotor::rotor(data.time as f32, 1., -1., 0.5);
 
-        ctx.stroke(
-            Circle::new(Point::new(data.x as f64, data.y as f64), 15.0),
-            &fill_color,
-            5.0,
-        );
-
-
+        for p in data.indices.iter() {
+            // println!("drawing {} {} {}", p[0], p[1], p[2]);
+            let mut path = BezPath::new();
+            // path.move_to(self.to_druid_point(&r.apply_to(data.mesh[p[0]])));
+            // path.line_to(self.to_druid_point(&r.apply_to(data.mesh[p[1]])));
+            // path.line_to(self.to_druid_point(&r.apply_to(data.mesh[p[2]])));
+            // path.line_to(self.to_druid_point(&r.apply_to(data.mesh[p[0]])));
+            let stroke_color = Color::rgb8(240, 240, 240);
+            ctx.stroke(path, &stroke_color, 4.0);
+        }
 
         // Text is easy; in real use TextLayout should be stored in the widget
         // and reused.
-        let mut layout = TextLayout::<ArcStr>::from_text("hello");//data.to_owned());
-        layout.set_font(FontDescriptor::new(FontFamily::SANS_SERIF).
-            with_size(24.0)//.with_weight(FontWeight::BOLD)
-            .with_style(FontStyle::Italic));
+        let mut layout = TextLayout::<ArcStr>::from_text("klein rust"); //data.to_owned());
+        layout.set_font(
+            FontDescriptor::new(FontFamily::SANS_SERIF)
+                .with_size(24.0) //.with_weight(FontWeight::BOLD)
+                .with_style(FontStyle::Italic),
+        );
         layout.set_text_color(fill_color);
-//        layout.set_text_style(FontStyle::Italic);
+        //        layout.set_text_style(FontStyle::Italic);
         layout.rebuild_if_needed(ctx.text(), env);
 
         // Let's rotate our text slightly. First we save our current (default) context:
@@ -429,30 +448,28 @@ impl Widget<State> for CustomWidget {
         });
         // When we exit with_save, the original context's rotation is restored
 
-//drawtext(ctx);
-     // let layout2 = ctx
+        //drawtext(ctx);
+        // let layout2 = ctx
         // .text()
 
-// let mut moo: () = layout2;
+        // let mut moo: () = layout2;
         // .new_text_layout("Helloo piet!");
         // .font(FontFamily::SYSTEM_UI, 24.0)
-// .default_attribute(FontStyle::Italic)
-// .default_attribute(FontWeight::BOLD)
+        // .default_attribute(FontStyle::Italic)
+        // .default_attribute(FontWeight::BOLD)
         // .default_attribute(TextAttribute::TextColor(RED_ALPHA))
         // .build()?;
 
-//     let w: f64 = layout2.size().width;
-//     rc.draw_text(&layout2, (80.0, 10.0));
+        //     let w: f64 = layout2.size().width;
+        //     rc.draw_text(&layout2, (80.0, 10.0));
 
-//     rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &RED_ALPHA, 1.0);
+        //     rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &RED_ALPHA, 1.0);
 
-//     rc.with_save(|rc| {
-//         rc.transform(Affine::rotate(0.1));
-//         rc.draw_text(&layout2, (80.0, 10.0));
-//         Ok(())
-//     })?;
-
-
+        //     rc.with_save(|rc| {
+        //         rc.transform(Affine::rotate(0.1));
+        //         rc.draw_text(&layout2, (80.0, 10.0));
+        //         Ok(())
+        //     })?;
 
         // Let's burn some CPU to make a (partially transparent) image buffer
         let image_data = make_image_data(256, 256);
@@ -464,25 +481,85 @@ impl Widget<State> for CustomWidget {
     }
 }
 
-pub fn main() {
-    let window = WindowDesc::new(|| CustomWidget::default()).title(
-        LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Fancy Colors"),
+// fn draw_triangle(ctx: &mut PaintCtx, idx: usize, vertices: Vec<Point>, indices: Vec<Vec<usize>>) {}
+use notify::{Watcher, RecommendedWatcher, RecursiveMode, Result};
+
+pub fn main() -> Result<()> {
+    let window = WindowDesc::new(|| CustomWidget::new()).title(
+        LocalizedString::new("custom-widget-demo-window-title").with_placeholder("klein rust demo"),
     );
+    let mut s = State {
+        ..Default::default()
+    };
 
 
-    let mut s = State{x:200.,y:200.,..Default::default()};
+    // Automatically select the best implementation for your platform.
+    let mut watcher: RecommendedWatcher = Watcher::new_immediate(|res| {
+        match res {
+           Ok(event) => println!("event: {:?}", event),
+           Err(e) => println!("watch error: {:?}", e),
+        }
+    })?;
 
-    s.add_dot("A".to_string(), -1., -1.);
-    s.add_dot("B".to_string(), -1., 1.);
-    s.add_dot("C".to_string(), 1., 1.);
+    // Add a path to be watched. All files and directories at that path and
+    // below will be monitored for changes.
+    watcher.watch("../diagram drawing scripts/", RecursiveMode::Recursive)?;
 
-pga3d::moo();
+
+println!("current dir: {:?}", std::env::current_dir().unwrap());
+
+
+    let mut ps = Rc::get_mut(&mut s.points).unwrap();
+
+    let mut p = Conformal2D::up(1.,1.,);
+    println!("POINTS {}", p);
+
+    p = p * 2.;
+    println!("POINTS2 {}", p);
+
+    // println!("e3 ^ 2 = {} {}", Conformal2D::e3(), Conformal2D::e3() * Conformal2D::e3());
+    // println!("e4 ^ 2 = {} {}", Conformal2D::e4(), Conformal2D::e4() * Conformal2D::e4());
+
+   // let c = (Conformal2D::no() | &p) * (&p).Conjugate();// 4
+   // let c = &p * &(p.Conjugate());
+   let c = &p * &(p.Dual());
+    // let c = (Conformal2D::no() | &p) * (&p).Reverse();// -4
+  //  let c = (Conformal2D::no() | &p) * (&p).Reverse();// -4
+
+// println!("CCC {}", c);
+// println!("ppp {}", (Conformal2D::ni() | p).get_s());
+    println!("POINTS2 {}, {}", p.x(), p.y());
+
+
+    //s.points.push(p);
+    
+    // ps.push(FlatlandPoint::new(0., 0.6));
+    // ps.push(FlatlandPoint::new(0.94, 0.));
+
+    // let y1 = Point::new(0., 1., 0.);
+    // let p1 = Rotor::rotor(f32::acos(-1. / 3.), 1., 0., 0.).apply_to(y1);
+    // let r = Rotor::rotor(f32::acos(-0.5), 0., 1., 0.);
+    // let p2 = r.apply_to(p1);
+
+    // let mut mesh = Rc::get_mut(&mut s.mesh).unwrap();
+    // mesh.push(y1);
+    // mesh.push(p1);
+    // mesh.push(p2);
+    // mesh.push(r.apply_to(p2));
+
+    // let mut indices = Rc::get_mut(&mut s.indices).unwrap();
+    // indices.push(vec![0, 1, 2]);
+    // indices.push(vec![0, 2, 3]);
+    // indices.push(vec![0, 3, 1]);
+    // indices.push(vec![1, 3, 2]);
 
     AppLauncher::with_window(window)
         .use_simple_logger()
         .launch(s)
         // .launch("Druid + Piet".to_string())
         .expect("launch failed");
+
+    Ok(())
 }
 
 fn make_image_data(width: usize, height: usize) -> Vec<u8> {

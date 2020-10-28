@@ -1,4 +1,4 @@
-y// 3D Projective Geometric Algebra
+// 3D Projective Geometric Algebra
 // Written by a generator written by enki.
 #![allow(unused_imports)]
 #![allow(dead_code)]

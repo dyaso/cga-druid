@@ -7,4 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+# draw things
 druid = { git = "https://github.com/linebender/druid.git" }
+
+# describe things to draw
+mlua = { version = "0.4.2", features = ["luajit", "vendored"]}
+
+# check for updates to descriptions of things to draw
+notify = "5.0.0-pre.3"
+

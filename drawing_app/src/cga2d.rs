@@ -19,11 +19,11 @@ const basis: &'static [&'static str] = &[ "1","e1","e2","e3","e4","e12","e13","e
 const basis_count: usize = basis.len();
 
 #[derive(Default,Debug,Clone,PartialEq)]
-struct R310 {
+pub struct Conformal2D {
     mvec: Vec<float_t>
 }
 
-impl R310 {
+impl Conformal2D {
     pub fn zero() -> Self {
         Self {
             mvec: vec![0.0; basis_count]
@@ -37,24 +37,48 @@ impl R310 {
     }
 
     // basis vectors are available as methods
-    pub fn e1() -> Self { R310::new(1.0, 1) }
-    pub fn e2() -> Self { R310::new(1.0, 2) }
-    pub fn e3() -> Self { R310::new(1.0, 3) }
-    pub fn e4() -> Self { R310::new(1.0, 4) }
-    pub fn e12() -> Self { R310::new(1.0, 5) }
-    pub fn e13() -> Self { R310::new(1.0, 6) }
-    pub fn e14() -> Self { R310::new(1.0, 7) }
-    pub fn e23() -> Self { R310::new(1.0, 8) }
-    pub fn e24() -> Self { R310::new(1.0, 9) }
-    pub fn e34() -> Self { R310::new(1.0, 10) }
-    pub fn e123() -> Self { R310::new(1.0, 11) }
-    pub fn e124() -> Self { R310::new(1.0, 12) }
-    pub fn e134() -> Self { R310::new(1.0, 13) }
-    pub fn e234() -> Self { R310::new(1.0, 14) }
-    pub fn e1234() -> Self { R310::new(1.0, 15) }
+    pub fn e1() -> Self { Conformal2D::new(1.0, 1) }
+    pub fn e2() -> Self { Conformal2D::new(1.0, 2) }
+    pub fn e3() -> Self { Conformal2D::new(1.0, 3) }
+    pub fn e4() -> Self { Conformal2D::new(1.0, 4) }
+    pub fn e12() -> Self { Conformal2D::new(1.0, 5) }
+    pub fn e13() -> Self { Conformal2D::new(1.0, 6) }
+    pub fn e14() -> Self { Conformal2D::new(1.0, 7) }
+    pub fn e23() -> Self { Conformal2D::new(1.0, 8) }
+    pub fn e24() -> Self { Conformal2D::new(1.0, 9) }
+    pub fn e34() -> Self { Conformal2D::new(1.0, 10) }
+    pub fn e123() -> Self { Conformal2D::new(1.0, 11) }
+    pub fn e124() -> Self { Conformal2D::new(1.0, 12) }
+    pub fn e134() -> Self { Conformal2D::new(1.0, 13) }
+    pub fn e234() -> Self { Conformal2D::new(1.0, 14) }
+    pub fn e1234() -> Self { Conformal2D::new(1.0, 15) }
+    pub fn get_s(&self) -> float_t { self[0] }
+    pub fn get_1(&self) -> float_t { self[1] }
+    pub fn get_2(&self) -> float_t { self[2] }
+    pub fn get_3(&self) -> float_t { self[3] }
+    pub fn get_4(&self) -> float_t { self[4] }
+    pub fn get_e1(&self) -> float_t { self[1] }
+    pub fn get_e2(&self) -> float_t { self[2] }
+    pub fn get_e3(&self) -> float_t { self[3] }
+    pub fn get_e4(&self) -> float_t { self[4] }
+    
+    pub fn get_ep(&self) -> float_t { self[3] }
+    pub fn get_en(&self) -> float_t { self[4] }
+
+    pub fn get_12(&self) -> float_t { self[5] }
+    pub fn get_13(&self) -> float_t { self[6] }
+    pub fn get_14(&self) -> float_t { self[7] }
+    pub fn get_23(&self) -> float_t { self[8] }
+    pub fn get_24(&self) -> float_t { self[9] }
+    pub fn get_34(&self) -> float_t { self[10] }
+    pub fn get_123(&self) -> float_t { self[11] }
+    pub fn get_124(&self) -> float_t { self[12] }
+    pub fn get_134(&self) -> float_t { self[13] }
+    pub fn get_234(&self) -> float_t { self[14] }
+    pub fn get_1234(&self) -> float_t { self[15] }
 }
 
-impl Index<usize> for R310 {
+impl Index<usize> for Conformal2D {
     type Output = float_t;
 
     fn index<'a>(&'a self, index: usize) -> &'a Self::Output {
@@ -62,13 +86,13 @@ impl Index<usize> for R310 {
     }
 }
 
-impl IndexMut<usize> for R310 {
+impl IndexMut<usize> for Conformal2D {
     fn index_mut<'a>(&'a mut self, index: usize) -> &'a mut Self::Output {
         &mut self.mvec[index]
     }
 }
 
-impl fmt::Display for R310 {
+impl fmt::Display for Conformal2D {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut n = 0;
         let ret = self.mvec.iter().enumerate().filter_map(|(i, &coeff)| {
@@ -156,9 +180,9 @@ macro_rules! define_binary_op_all(
 
 // Reverse
 // Reverse the order of the basis blades.
-impl R310 {
-    pub fn Reverse(self: & Self) -> R310 {
-        let mut res = R310::zero();
+impl Conformal2D {
+    pub fn Reverse(self: & Self) -> Conformal2D {
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0]=a[0];
         res[1]=a[1];
@@ -182,9 +206,9 @@ impl R310 {
 
 // Dual
 // Poincare duality operator.
-impl R310 {
-    pub fn Dual(self: & Self) -> R310 {
-        let mut res = R310::zero();
+impl Conformal2D {
+    pub fn Dual(self: & Self) -> Conformal2D {
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0]=-a[15];
         res[1]=a[14];
@@ -206,11 +230,11 @@ impl R310 {
     }
 }
 
-impl Not for & R310 {
-    type Output = R310;
+impl Not for & Conformal2D {
+    type Output = Conformal2D;
 
-    fn not(self: Self) -> R310 {
-        let mut res = R310::zero();
+    fn not(self: Self) -> Conformal2D {
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0]=-a[15];
         res[1]=a[14];
@@ -234,9 +258,9 @@ impl Not for & R310 {
 
 // Conjugate
 // Clifford Conjugation
-impl R310 {
-    pub fn Conjugate(self: & Self) -> R310 {
-        let mut res = R310::zero();
+impl Conformal2D {
+    pub fn Conjugate(self: & Self) -> Conformal2D {
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0]=a[0];
         res[1]=-a[1];
@@ -260,9 +284,9 @@ impl R310 {
 
 // Involute
 // Main involution
-impl R310 {
-    pub fn Involute(self: & Self) -> R310 {
-        let mut res = R310::zero();
+impl Conformal2D {
+    pub fn Involute(self: & Self) -> Conformal2D {
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0]=a[0];
         res[1]=-a[1];
@@ -290,12 +314,12 @@ impl R310 {
 define_binary_op_all!(
     Mul,
     mul;
-    self: R310, b: R310, Output = R310;
+    self: Conformal2D, b: Conformal2D, Output = Conformal2D;
     [val val] => &self * &b;
     [ref val] =>  self * &b;
     [val ref] => &self *  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0]=b[0]*a[0]+b[1]*a[1]+b[2]*a[2]+b[3]*a[3]-b[4]*a[4]-b[5]*a[5]-b[6]*a[6]+b[7]*a[7]-b[8]*a[8]+b[9]*a[9]+b[10]*a[10]-b[11]*a[11]+b[12]*a[12]+b[13]*a[13]+b[14]*a[14]-b[15]*a[15];
 		res[1]=b[1]*a[0]+b[0]*a[1]-b[5]*a[2]-b[6]*a[3]+b[7]*a[4]+b[2]*a[5]+b[3]*a[6]-b[4]*a[7]-b[11]*a[8]+b[12]*a[9]+b[13]*a[10]-b[8]*a[11]+b[9]*a[12]+b[10]*a[13]-b[15]*a[14]+b[14]*a[15];
@@ -324,12 +348,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     BitXor,
     bitxor;
-    self: R310, b: R310, Output = R310;
+    self: Conformal2D, b: Conformal2D, Output = Conformal2D;
     [val val] => &self ^ &b;
     [ref val] =>  self ^ &b;
     [val ref] => &self ^  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0]=b[0]*a[0];
 		res[1]=b[1]*a[0]+b[0]*a[1];
@@ -358,12 +382,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     BitAnd,
     bitand;
-    self: R310, b: R310, Output = R310;
+    self: Conformal2D, b: Conformal2D, Output = Conformal2D;
     [val val] => &self & &b;
     [ref val] =>  self & &b;
     [val ref] => &self &  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[15]=(a[15]*b[15]);
 		res[14]=-(a[14]*-b[15]+a[15]*b[14]*-1.0);
@@ -392,12 +416,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     BitOr,
     bitor;
-    self: R310, b: R310, Output = R310;
+    self: Conformal2D, b: Conformal2D, Output = Conformal2D;
     [val val] => &self | &b;
     [ref val] =>  self | &b;
     [val ref] => &self |  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0]=b[0]*a[0]+b[1]*a[1]+b[2]*a[2]+b[3]*a[3]-b[4]*a[4]-b[5]*a[5]-b[6]*a[6]+b[7]*a[7]-b[8]*a[8]+b[9]*a[9]+b[10]*a[10]-b[11]*a[11]+b[12]*a[12]+b[13]*a[13]+b[14]*a[14]-b[15]*a[15];
 		res[1]=b[1]*a[0]+b[0]*a[1]-b[5]*a[2]-b[6]*a[3]+b[7]*a[4]+b[2]*a[5]+b[3]*a[6]-b[4]*a[7]-b[11]*a[8]+b[12]*a[9]+b[13]*a[10]-b[8]*a[11]+b[9]*a[12]+b[10]*a[13]-b[15]*a[14]+b[14]*a[15];
@@ -426,12 +450,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     Add,
     add;
-    self: R310, b: R310, Output = R310;
+    self: Conformal2D, b: Conformal2D, Output = Conformal2D;
     [val val] => &self + &b;
     [ref val] =>  self + &b;
     [val ref] => &self +  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0] = a[0]+b[0];
 		res[1] = a[1]+b[1];
@@ -460,12 +484,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     Sub,
     sub;
-    self: R310, b: R310, Output = R310;
+    self: Conformal2D, b: Conformal2D, Output = Conformal2D;
     [val val] => &self - &b;
     [ref val] =>  self - &b;
     [val ref] => &self -  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0] = a[0]-b[0];
 		res[1] = a[1]-b[1];
@@ -494,12 +518,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     Mul,
     mul;
-    self: float_t, b: R310, Output = R310;
+    self: float_t, b: Conformal2D, Output = Conformal2D;
     [val val] => &self * &b;
     [ref val] =>  self * &b;
     [val ref] => &self *  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0] = a*b[0];
         res[1] = a*b[1];
@@ -528,12 +552,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     Mul,
     mul;
-    self: R310, b: float_t, Output = R310;
+    self: Conformal2D, b: float_t, Output = Conformal2D;
     [val val] => &self * &b;
     [ref val] =>  self * &b;
     [val ref] => &self *  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0] = a[0]*b;
         res[1] = a[1]*b;
@@ -562,12 +586,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     Add,
     add;
-    self: float_t, b: R310, Output = R310;
+    self: float_t, b: Conformal2D, Output = Conformal2D;
     [val val] => &self + &b;
     [ref val] =>  self + &b;
     [val ref] => &self +  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0] = a+b[0];
         res[1] = b[1];
@@ -596,12 +620,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     Add,
     add;
-    self: R310, b: float_t, Output = R310;
+    self: Conformal2D, b: float_t, Output = Conformal2D;
     [val val] => &self + &b;
     [ref val] =>  self + &b;
     [val ref] => &self +  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0] = a[0]+b;
         res[1] = a[1];
@@ -630,12 +654,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     Sub,
     sub;
-    self: float_t, b: R310, Output = R310;
+    self: float_t, b: Conformal2D, Output = Conformal2D;
     [val val] => &self - &b;
     [ref val] =>  self - &b;
     [val ref] => &self -  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0] = a-b[0];
         res[1] = -b[1];
@@ -664,12 +688,12 @@ define_binary_op_all!(
 define_binary_op_all!(
     Sub,
     sub;
-    self: R310, b: float_t, Output = R310;
+    self: Conformal2D, b: float_t, Output = Conformal2D;
     [val val] => &self - &b;
     [ref val] =>  self - &b;
     [val ref] => &self -  b;
     [ref ref] => {
-        let mut res = R310::zero();
+        let mut res = Conformal2D::zero();
         let a = self;
         res[0] = a[0]-b;
         res[1] = a[1];
@@ -692,7 +716,7 @@ define_binary_op_all!(
 );
 
 
-impl R310 {
+impl Conformal2D {
     pub fn norm(self: & Self) -> float_t {
         let scalar_part = (self * self.Conjugate())[0];
 
@@ -707,15 +731,33 @@ impl R310 {
         self * (1.0 / self.norm())
     }
     
-    
+    pub fn no() -> Self {  Self::e4() - Self::e3() }
+    pub fn ni() -> Self { (Self::e3() + Self::e4())*0.5 }
+
+    pub fn get_no(&self) -> float_t {      self.get_e4() - self.get_e3() }
+    pub fn get_ni(&self) -> float_t { 0.5*(self.get_e3() + self.get_e4()) }
+
+    pub fn x(&self) -> float_t { self.get_e1() / -((Self::ni() | self).get_s()) }
+    pub fn y(&self) -> float_t { self.get_e2() / -((Self::ni() | self).get_s()) }
+  
+
+
+    pub fn up(x: float_t, y: float_t) -> Self {
+        x * Self::e1() + 
+        y * Self::e2() + 
+        //z * Self::e3() + 
+        0.5 * (x * x + y * y) * Self::ni() // + z * z
+        + Self::no()
+  }
+
 
 }
 
 
 fn main() {
 
-  println!("e1*e1         : {}", R310::e1() * R310::e1());
-  println!("pss           : {}", R310::e1234());
-  println!("pss*pss       : {}", R310::e1234() * R310::e1234());
+  println!("e1*e1         : {}", Conformal2D::e1() * Conformal2D::e1());
+  println!("pss           : {}", Conformal2D::e1234());
+  println!("pss*pss       : {}", Conformal2D::e1234() * Conformal2D::e1234());
 
 }
