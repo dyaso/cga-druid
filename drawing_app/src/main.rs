@@ -498,7 +498,7 @@ pub fn main() -> Result<()> {
         ..Default::default()
     };
 
-    crate::scripting::rhai::load_scripts();
+    let script = crate::scripting::rhai::RunningScript::new("../diagram drawing scripts/test.rhai".into());
 
     // Automatically select the best implementation for your platform.
     let mut watcher: RecommendedWatcher = Watcher::new_immediate(|res| {

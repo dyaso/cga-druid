@@ -10,7 +10,7 @@ I want to make UIs based around vector graphics instead of pixels, so a simple d
 
 ### Progress
 
-`2020-10-28` Reading "[A Covariant Approach to Geometry using Geometric Algebra](./Covarient\ Approach\ to\ Geometry\ Using\ Geometric\ Algebra.pdf)"
+`2020-10-28` Reading "[A Covariant Approach to Geometry using Geometric Algebra](Covarient%20Approach%20to%20Geometry%20Using%20Geometric%20Algebra.pdf)"
 
 ### Questions
 
@@ -20,6 +20,6 @@ How axis-aligned bounding boxes should work (for UI elements), or just use circl
 
 https://arewegameyet.rs/ecosystem/scripting/
 
-The most important ability is writing expressions with multiple different products and unary operators (dual, reverse, complement, involution, i'm not sure), so either easy operator overloading or effective processing of source code is a must (the latter likely meaning a Lisp).
+The most important ability is writing expressions with multiple different products and unary operators (dual, reverse, complement, conjugate, involution, i'm not sure), so either easy operator overloading or effective processing of source code is a must (the latter likely meaning a Lisp).
 
 
