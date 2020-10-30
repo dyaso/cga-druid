@@ -100,7 +100,8 @@ impl fmt::Display for Conformal2D {
                 n = 1;
                 Some(format!("{}{}", 
                         format!("{:.*}", 7, coeff).trim_end_matches('0').trim_end_matches('.'),
-                        if i > 0 { basis[i] } else { "" }
+                        if i > 0 { format!("\u{001b}[4m{}\u{001b}[0m", basis[i]) } else { "".into() }
+                        // if i > 0 { "\u{001b}[4m{}".to_owned() + basis[i] } else { "".into() }
                     )
                 )
             } else {

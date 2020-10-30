@@ -484,6 +484,12 @@ impl Widget<State> for CustomWidget {
 // fn draw_triangle(ctx: &mut PaintCtx, idx: usize, vertices: Vec<Point>, indices: Vec<Vec<usize>>) {}
 use notify::{Watcher, RecommendedWatcher, RecursiveMode, Result};
 
+mod scripting;
+//use crate::scripting;
+
+const RED_FG: &str = "\u{001b}[31m";
+const RESET_FG: &str = "\u{001b}[0m";
+
 pub fn main() -> Result<()> {
     let window = WindowDesc::new(|| CustomWidget::new()).title(
         LocalizedString::new("custom-widget-demo-window-title").with_placeholder("klein rust demo"),
@@ -492,11 +498,12 @@ pub fn main() -> Result<()> {
         ..Default::default()
     };
 
+    crate::scripting::rhai::load_scripts();
 
     // Automatically select the best implementation for your platform.
     let mut watcher: RecommendedWatcher = Watcher::new_immediate(|res| {
         match res {
-           Ok(event) => println!("event: {:?}", event),
+           Ok(event) => println!("{}watch{} event: {:?}", RED_FG, RESET_FG, event),
            Err(e) => println!("watch error: {:?}", e),
         }
     })?;

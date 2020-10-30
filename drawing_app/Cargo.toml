@@ -12,7 +12,10 @@ edition = "2018"
 druid = { git = "https://github.com/linebender/druid.git" }
 
 # describe things to draw
-mlua = { version = "0.4.2", features = ["luajit", "vendored"]}
+rhai = { version = "0.19.3", features = [ "only_i32"] } # "no_module", "no_function" 
+#rhai = { version = "0.19.3", features = [ "sync", "unchecked", "only_i32", "no_float", "no_module", "no_function" ] }
+#mlua = { version = "0.4.2", features = ["luajit", "vendored"]}
+
 
 # check for updates to descriptions of things to draw
 notify = "5.0.0-pre.3"
