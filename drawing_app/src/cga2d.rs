@@ -716,7 +716,13 @@ define_binary_op_all!(
     };
 );
 
-
+// in setting up the null vectors for conformal geometry (from the extra positive- and negative-squaring dimensions e_p and e_n, here e3 and e4) i like how literally every source uses a different system:
+//             |    null_origin    |    null_infinity
+// ganja.js    |        e_n + e_p  | 0.5 * (e_n - e_p)
+// GA4CS       | 0.5 * (e_n + e_p) |        e_n - e_p
+// clifford.py | 0.5 * (e_n - e_p) |        e_n + e_p
+// D&L:GA4Phys |      - e_n + e_p  |        e_n + e_p
+// this uses the GA4CS version
 impl Conformal2D {
     pub fn norm(self: & Self) -> float_t {
         let scalar_part = (self * self.Conjugate())[0];
@@ -732,8 +738,8 @@ impl Conformal2D {
         self * (1.0 / self.norm())
     }
     
-    pub fn no() -> Self {  Self::e4() - Self::e3() }
-    pub fn ni() -> Self { (Self::e3() + Self::e4())*0.5 }
+    pub fn no() -> Self { 0.5* (Self::e4() + Self::e3())}
+    pub fn ni() -> Self {       Self::e4() - Self::e3() }
 
     pub fn get_no(&self) -> float_t {      self.get_e4() - self.get_e3() }
     pub fn get_ni(&self) -> float_t { 0.5*(self.get_e3() + self.get_e4()) }

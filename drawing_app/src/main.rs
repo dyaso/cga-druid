@@ -13,16 +13,19 @@ use druid::kurbo;
 
 use druid::widget::prelude::*;
 use druid::{
-    Affine, AppLauncher, ArcStr, Color, Data, FontDescriptor, LocalizedString, MouseEvent,
+    Affine, AppLauncher, ArcStr, Color, Data, FontDescriptor, LocalizedString, MouseEvent, Selector, Target,
     Point as DruidPoint, Rect, TextLayout, WindowDesc,
 };
+
+
+const FILES_CHANGED: Selector<notify::Event> = Selector::new("drawing-app.files-changed");
 
 //use klein::{ApplyOp, Line, Plane, Point, Rotor, Translator};
 
 mod cga2d;
 use cga2d::*;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct CustomWidget {
     lower_y: f64,
     upper_y: f64,
@@ -256,14 +259,16 @@ impl CustomWidget {
 }
 
 use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Clone, Data, Default)]
 struct State {
-    points: Rc<Vec<Conformal2D>>,
+    points: Arc<Vec<Conformal2D>>,
     mouse_over: Option<usize>,
     // mesh: Rc<Vec<Point>>,
-    indices: Rc<Vec<Vec<usize>>>,
+    indices: Arc<Vec<Vec<usize>>>,
     time: f64,
+    repaint: Arc<bool>,
 }
 
 impl Widget<State> for CustomWidget {
@@ -289,8 +294,14 @@ impl Widget<State> for CustomWidget {
                 // ctx.request_anim_frame();
             }
 
+            Event::Command(cmd) if cmd.is(FILES_CHANGED) => {
+                println!("{}Files changed{}: {:?}", CYAN_TEXT, RESET_TEXT, cmd.get_unchecked(FILES_CHANGED))
+                // data.0 = cmd.get_unchecked(SET_COLOR).clone();
+                // ctx.request_paint();
+            }
+
             _ => {
-                println!("unhandled input event {:?}", event);
+                println!("Unhandled {}widget event{}: {:?}", MAGENTA_TEXT,RESET_TEXT,event);
             }
         }
     }
@@ -303,7 +314,7 @@ impl Widget<State> for CustomWidget {
             LifeCycle::WidgetAdded => {
                 ctx.register_for_focus();
             }
-            _ => println!("unhandled lifecycle event: {:?}", event),
+            _ => println!("Unhandled lifecycle event: {:?}", event),
         }
     }
 
@@ -333,7 +344,7 @@ impl Widget<State> for CustomWidget {
     // Basically, anything that changes the appearance of a widget causes a paint.
     fn paint(&mut self, ctx: &mut PaintCtx, data: &State, env: &Env) {
         // Let's draw a picture with Piet!
-
+println!("PAINTING {:#?}", self);
         // Clear the whole widget with the color of your choice
         // (ctx.size() returns the size of the layout rect we're painting in)
         let size = ctx.size();
@@ -430,7 +441,7 @@ impl Widget<State> for CustomWidget {
 
         // Text is easy; in real use TextLayout should be stored in the widget
         // and reused.
-        let mut layout = TextLayout::<ArcStr>::from_text("klein rust"); //data.to_owned());
+        let mut layout = TextLayout::<ArcStr>::from_text("conformal geometry 2d"); //data.to_owned());
         layout.set_font(
             FontDescriptor::new(FontFamily::SANS_SERIF)
                 .with_size(24.0) //.with_weight(FontWeight::BOLD)
@@ -487,36 +498,113 @@ use notify::{Watcher, RecommendedWatcher, RecursiveMode, Result};
 mod scripting;
 //use crate::scripting;
 
-const RED_FG: &str = "\u{001b}[31m";
-const RESET_FG: &str = "\u{001b}[0m";
+const RESET_TEXT: &str = "\u{001b}[0m";
+
+const BLACK_TEXT: &str = "\u{001b}[30m";
+const RED_TEXT: &str = "\u{001b}[31m";
+const GREEN_TEXT: &str = "\u{001b}[32m";
+const YELLOW_TEXT: &str = "\u{001b}[33m";
+const BLUE_TEXT: &str = "\u{001b}[34m";
+const MAGENTA_TEXT: &str = "\u{001b}[35m;";
+const CYAN_TEXT: &str = "\u{001b}[36m";
+const WHITE_TEXT: &str = "\u{001b}[37m";
+const BRIGHT_BLACK_TEXT: &str = "\u{001b}[30;1m";
+const BRIGHT_RED_TEXT: &str = "\u{001b}[31;1m";
+const BRIGHT_GREEN_TEXT: &str = "\u{001b}[32;1m";
+const BRIGHT_YELLOW_TEXT: &str = "\u{001b}[33;1m";
+const BRIGHT_BLUE_TEXT: &str = "\u{001b}[34;1m";
+const BRIGHT_MAGENTA_TEXT: &str = "\u{001b}[35;1m";
+const BRIGHT_CYAN_TEXT: &str = "\u{001b}[36;1m";
+const BRIGHT_WHITE_TEXT: &str = "\u{001b}[37;1m";
+const BLACK_BG: &str = "\u{001b}[40m";
+const RED_BG: &str = "\u{001b}[41m";
+const GREEN_BG: &str = "\u{001b}[42m";
+const YELLOW_BG: &str = "\u{001b}[43m";
+const BLUE_BG: &str = "\u{001b}[44m";
+const MAGENTA_BG: &str = "\u{001b}[45m";
+const CYAN_BG: &str = "\u{001b}[46m";
+const WHITE_BG: &str = "\u{001b}[47m";
+
+const BOLD: &str = "\u{001b}[1m";
+const UNDERLINED: &str = "\u{001b}[4m";
+const INVERTED: &str = "\u{001b}[7m";
+
+    // Reset: \u001b[0m
+
+
+use std::thread;
+
+// impl State {
+//     pub fn repaint(&mut self) {
+//         self.repaint = true;
+//     }
+// }
 
 pub fn main() -> Result<()> {
     let window = WindowDesc::new(|| CustomWidget::new()).title(
-        LocalizedString::new("custom-widget-demo-window-title").with_placeholder("klein rust demo"),
+        LocalizedString::new("custom-widget-demo-window-title").with_placeholder("CGA rust"),
     );
+
+
+    let (tx, rx) = std::sync::mpsc::channel();
+
+//    let () = rx; //std::sync::mpsc::Receiver
+
+    let mut rep = Arc::<bool>::new(true);
+
     let mut s = State {
+        repaint: Arc::clone(&rep),
         ..Default::default()
     };
 
     let script = crate::scripting::rhai::RunningScript::new("../diagram drawing scripts/test.rhai".into());
 
-    // Automatically select the best implementation for your platform.
-    let mut watcher: RecommendedWatcher = Watcher::new_immediate(|res| {
-        match res {
-           Ok(event) => println!("{}watch{} event: {:?}", RED_FG, RESET_FG, event),
-           Err(e) => println!("watch error: {:?}", e),
-        }
-    })?;
+//https://github.com/notify-rs/notify/blob/main/examples/monitor_raw.rs
 
+    // // Automatically select the best implementation for your platform.
+    // let mut watcher: RecommendedWatcher = Watcher::new_immediate(|res| {
+    //     match res {
+    //         Ok(event) => {
+    //             println!("{}watch{} event: {:?}", RED_TEXT, RESET_TEXT, event);
+    //             s.repaint = true;
+    //         },
+    //         Err(e) => println!("watch error: {:?}", e),
+    //     }
+    // })?;
+    let mut watcher: RecommendedWatcher = Watcher::new_immediate(move |res| tx.send(res).unwrap())?;
     // Add a path to be watched. All files and directories at that path and
     // below will be monitored for changes.
     watcher.watch("../diagram drawing scripts/", RecursiveMode::Recursive)?;
 
+    // Add a path to be watched. All files and directories at that path and
+    // below will be monitored for changes.
+    //watcher.watch(path, RecursiveMode::Recursive)?;
 
+//    let mut rep = &Arc::get_mut(&mut s.repaint).unwrap();
+
+    let launcher = AppLauncher::with_window(window);
+    let event_sink = launcher.get_external_handle();
+
+
+    thread::spawn(move || {
+        for res in rx {
+            match res {
+                Ok(event) => {
+                    println!("changed: {:?}", event);
+                    // let () = event;
+                    if event_sink.submit_command(FILES_CHANGED, event, Target::Auto).is_err() {
+                        println!("Submitting files-changed event to Druid window failed");
+                    }
+                },
+                Err(e) => println!("watch error: {:?}", e),
+            }
+        }
+    });
 println!("current dir: {:?}", std::env::current_dir().unwrap());
 
 
-    let mut ps = Rc::get_mut(&mut s.points).unwrap();
+//    let mut ps = Rc::get_mut(&mut s.points).unwrap();
+    // let mut ps = s.points;
 
     let mut p = Conformal2D::up(1.,1.,);
     println!("POINTS {}", p);
@@ -560,11 +648,12 @@ println!("current dir: {:?}", std::env::current_dir().unwrap());
     // indices.push(vec![0, 3, 1]);
     // indices.push(vec![1, 3, 2]);
 
-    AppLauncher::with_window(window)
+
+    launcher
         .use_simple_logger()
         .launch(s)
         // .launch("Druid + Piet".to_string())
-        .expect("launch failed");
+        .expect("Conformal geometric algebra drawing app launch failed");
 
     Ok(())
 }
